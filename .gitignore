@@ -1,0 +1,26 @@
+# Build output folders
+Debug/
+Release/
+build/
+bin/
+obj/
+
+# Compiled files
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.d
+*.map
+
+# IDE metadata (S32DS, Eclipse, STM32CubeIDE, VSCode)
+.metadata/
+.settings/
+.vscode/
+.idea/
+*.launch
+
+# OS files
+Thumbs.db
+.DS_Store

@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ Thống Xe Ô Tô Thông Minh Mạng CAN Bus - Báo Cáo Thiết Kế Toàn Diện</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .node-card {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .node-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px -10px rgba(0, 0, 0, 0.4);
+    }
+    .bus-pulse {
+      stroke-dasharray: 8, 8;
+      animation: dash 1.5s linear infinite;
+    }
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -32;
+      }
+    }
+    /* Custom scrollbar for tables */
+    ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 font-bold text-lg text-white">
+          CAN
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-extrabold text-white tracking-tight">HỆ THỐNG XE Ô TÔ THÔNG MINH MẠNG CAN BUS</h1>
+            <span class="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 border border-cyan-800 text-cyan-400 font-mono">AUTOMOTIVE E/E</span>
+          </div>
+          <p class="text-xs text-slate-400">4 Node Độc Lập • Lái Vi Sai RWD • ADAS AEB • Cruise & Map Ảo</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 font-medium text-xs">
+        <button onclick="switchTab('architecture')" id="tab-btn-architecture" class="px-3 py-1.5 rounded-lg bg-cyan-600 text-white font-semibold transition whitespace-nowrap shadow-sm">
+          1. Sơ Đồ Toàn Mạng
+        </button>
+        <button onclick="switchTab('modes')" id="tab-btn-modes" class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">
+          2. Chế Độ Lái (3 Mode)
+        </button>
+        <button onclick="switchTab('can-matrix')" id="tab-btn-can-matrix" class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">
+          3. Ma Trận CAN (DBC)
+        </button>
+        <button onclick="switchTab('dataflow')" id="tab-btn-dataflow" class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">
+          4. Luồng Dữ Liệu
+        </button>
+        <button onclick="switchTab('hardware')" id="tab-btn-hardware" class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">
+          5. Linh Kiện & Chân Nối
+        </button>
+        <button onclick="switchTab('roadmap')" id="tab-btn-roadmap" class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800">
+          6. Lộ Trình Triển Khai
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: SƠ ĐỒ TOÀN MẠNG (ARCHITECTURE) -->
+    <!-- ========================================== -->
+    <section id="tab-architecture" class="space-y-6">
+      
+      <!-- CAN BUS BACKBONE TRUNK -->
+      <div class="relative bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl overflow-hidden">
+        <div class="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-60"></div>
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-amber-400">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-white uppercase tracking-wider">Đường Trục Mạng CAN Bus Vi Sai 2 Dây (Physical Bus Backbone)</h2>
+              <p class="text-xs text-slate-400 font-mono">Baudrate: 500 kbps • CAN 2.0A 11-bit ID • Trở kết thúc 120Ω ở 2 đầu xa nhất</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 text-xs font-mono bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-2 bg-amber-400 rounded-sm"></span>
+              <span class="text-slate-300">CAN_H (2.5V - 3.5V)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-2 bg-emerald-400 rounded-sm"></span>
+              <span class="text-slate-300">CAN_L (1.5V - 2.5V)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- THE BUS WIRES SVG -->
+        <div class="relative py-4 px-2 bg-slate-950/80 rounded-xl border border-slate-800/80 my-2">
+          <!-- Termination resistors -->
+          <div class="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-slate-900 border border-amber-500/70 px-2.5 py-1 rounded-md text-[11px] font-mono text-amber-300 shadow-md">
+            R1: 120Ω
+          </div>
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-slate-900 border border-amber-500/70 px-2.5 py-1 rounded-md text-[11px] font-mono text-amber-300 shadow-md">
+            R2: 120Ω
+          </div>
+
+          <svg class="w-full h-16" viewBox="0 0 1000 65" fill="none" preserveAspectRatio="none">
+            <!-- CAN_H Line -->
+            <line x1="70" y1="20" x2="930" y2="20" stroke="#fbbf24" stroke-width="4" stroke-linecap="round"/>
+            <line x1="70" y1="20" x2="930" y2="20" stroke="#fef08a" stroke-width="2" class="bus-pulse"/>
+            <!-- CAN_L Line -->
+            <line x1="70" y1="45" x2="930" y2="45" stroke="#34d399" stroke-width="4" stroke-linecap="round"/>
+            <line x1="70" y1="45" x2="930" y2="45" stroke="#a7f3d0" stroke-width="2" class="bus-pulse"/>
+
+            <!-- Stub drops to 4 nodes -->
+            <path d="M 175 20 L 175 65" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="3,3"/>
+            <path d="M 185 45 L 185 65" stroke="#34d399" stroke-width="2.5" stroke-dasharray="3,3"/>
+
+            <path d="M 400 20 L 400 65" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="3,3"/>
+            <path d="M 410 45 L 410 65" stroke="#34d399" stroke-width="2.5" stroke-dasharray="3,3"/>
+
+            <path d="M 625 20 L 625 65" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="3,3"/>
+            <path d="M 635 45 L 635 65" stroke="#34d399" stroke-width="2.5" stroke-dasharray="3,3"/>
+
+            <path d="M 850 20 L 850 65" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="3,3"/>
+            <path d="M 860 45 L 860 65" stroke="#34d399" stroke-width="2.5" stroke-dasharray="3,3"/>
+          </svg>
+
+          <div class="grid grid-cols-4 text-center text-[11px] font-mono text-slate-400 mt-1">
+            <div>Stub Cáp Node 1</div>
+            <div>Stub Cáp Node 2</div>
+            <div>Stub Cáp Node 3</div>
+            <div>Stub Cáp Node 4</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 NODES CARDS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        <!-- NODE 1 -->
+        <div class="node-card bg-slate-900 border border-cyan-800/60 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-bold text-cyan-400 font-mono">NODE 1 • GATEWAY</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">Telematics</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Gateway Web / Wi-Fi</h3>
+            <p class="text-xs font-mono text-cyan-300/80">MCU: ESP32-WROOM-32</p>
+
+            <div class="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+              <div class="text-[11px] font-mono text-slate-400 flex justify-between">
+                <span>Transceiver rời:</span>
+                <span class="text-emerald-400 font-bold">SN65HVD230 (3.3V)</span>
+              </div>
+              <div class="text-[10px] font-mono text-slate-500">Chân CAN: GPIO 5 (TX) • GPIO 4 (RX)</div>
+            </div>
+
+            <div class="mt-4 space-y-2 text-xs text-slate-300">
+              <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wider">Chức năng chính:</div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                <span>Phát Wi-Fi AP + Web Server điều khiển</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                <span>Chọn 3 Mode lái: Manual / Cruise / Map ảo</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                <span>Dashboard hiển thị tốc độ, pin, lỗi mạng</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-800 flex justify-between text-xs font-mono">
+            <span class="text-slate-500">Bản tin TX:</span>
+            <span class="text-cyan-400 font-semibold">0x100, 0x120, 0x130, 0x700</span>
+          </div>
+        </div>
+
+        <!-- NODE 2 -->
+        <div class="node-card bg-slate-900 border border-rose-800/60 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-bold text-rose-400 font-mono">NODE 2 • MAIN ECU</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">Powertrain</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Điều Khiển Động Lực</h3>
+            <p class="text-xs font-mono text-rose-300/80">MCU: NXP S32K144 (Auto Grade)</p>
+
+            <div class="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+              <div class="text-[11px] font-mono text-slate-400 flex justify-between">
+                <span>Transceiver rời:</span>
+                <span class="text-emerald-400 font-bold">SN65HVD230 (3.3V)</span>
+              </div>
+              <div class="text-[10px] font-mono text-slate-500">Chân CAN: PTE5 (TX) • PTE4 (RX)</div>
+            </div>
+
+            <div class="mt-4 space-y-2 text-xs text-slate-300">
+              <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wider">Chức năng chính:</div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                <span>Lái vi sai 2 bánh sau qua Driver L298N</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                <span>2 Encoder Hall đo tốc & Odometry</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                <span>PID Cruise Control + Thuật toán Map ảo</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                <span>Failsafe: Ngắt tức thì khi nhận AEB/Crash</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-800 flex justify-between text-xs font-mono">
+            <span class="text-slate-500">Bản tin TX:</span>
+            <span class="text-rose-400 font-semibold">0x200, 0x701</span>
+          </div>
+        </div>
+
+        <!-- NODE 3 -->
+        <div class="node-card bg-slate-900 border border-amber-800/60 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-bold text-amber-400 font-mono">NODE 3 • SAFETY</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">Active ADAS</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">An Toàn Phanh Khẩn Cấp</h3>
+            <p class="text-xs font-mono text-amber-300/80">MCU: STM32F103C8T6 (Blue Pill)</p>
+
+            <div class="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+              <div class="text-[11px] font-mono text-slate-400 flex justify-between">
+                <span>Transceiver rời:</span>
+                <span class="text-emerald-400 font-bold">SN65HVD230 (3.3V)</span>
+              </div>
+              <div class="text-[10px] font-mono text-slate-500">Chân CAN: PB9 (TX) • PB8 (RX)</div>
+            </div>
+
+            <div class="mt-4 space-y-2 text-xs text-slate-300">
+              <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wider">Chức năng chính:</div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span>Đọc 2-3 Cảm biến Laser ToF (VL53L0X)</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span>Phát hiện cản &lt; 15cm trong mọi mode</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span>Bắn bản tin phanh AEB (CAN ID 0x050 - P2)</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span>Tự động nhả phanh khi cản rời đi (&gt;30cm)</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-800 flex justify-between text-xs font-mono">
+            <span class="text-slate-500">Bản tin TX:</span>
+            <span class="text-amber-400 font-semibold">0x050, 0x250, 0x702</span>
+          </div>
+        </div>
+
+        <!-- NODE 4 -->
+        <div class="node-card bg-slate-900 border border-purple-800/60 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-bold text-purple-400 font-mono">NODE 4 • CLUSTER/BCM</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-800">Body & Dash</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mt-3">Đồng Hồ, Thân Vỏ & IMU</h3>
+            <p class="text-xs font-mono text-purple-300/80">MCU: STM32F103C8T6 (Blue Pill)</p>
+
+            <div class="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+              <div class="text-[11px] font-mono text-slate-400 flex justify-between">
+                <span>Transceiver rời:</span>
+                <span class="text-emerald-400 font-bold">SN65HVD230 (3.3V)</span>
+              </div>
+              <div class="text-[10px] font-mono text-slate-500">Chân CAN: PB9 (TX) • PB8 (RX)</div>
+            </div>
+
+            <div class="mt-4 space-y-2 text-xs text-slate-300">
+              <div class="font-semibold text-slate-400 text-[11px] uppercase tracking-wider">Chức năng chính:</div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                <span>Màn hình LCD 2004 hiển thị Tốc, Pin, Mode</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                <span>MPU-6050: Đo dốc Pitch & Va chạm túi khí</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                <span>Mạch chia áp đo % Pin + LED Báo rẽ/Phanh</span>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-800/40 border border-slate-800 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                <span>Heartbeat Monitor: Báo lỗi node offline</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-800 flex justify-between text-xs font-mono">
+            <span class="text-slate-500">Bản tin TX:</span>
+            <span class="text-purple-400 font-semibold">0x020, 0x300, 0x350, 0x703</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- POWER ARCHITECTURE -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold font-mono text-sm">
+            PWR
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-white">Kiến Trúc Tách Nguồn An Toàn (Power Domain Separation)</h4>
+            <p class="text-xs text-slate-400">Pin Li-ion 3S (11.1V - 12.6V) chia làm 2 ray riêng biệt để triệt tiêu hiện tượng sụt áp và nhiễu xung động cơ</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
+          <div class="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+            <span class="text-cyan-400 font-bold">Ray 1 (Buck 5V 3A):</span> 4 MCU + 4 Transceiver + Cảm biến + LCD
+          </div>
+          <div class="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+            <span class="text-rose-400 font-bold">Ray 2 (Pin 11.1V / Buck 7.4V):</span> Công suất động cơ qua Driver L298N
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: CHẾ ĐỘ LÁI (3 MODES) -->
+    <!-- ========================================== -->
+    <section id="tab-modes" class="space-y-6 hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-xl font-extrabold text-white">Cấu Trúc 3 Chế Độ Lái (Driving Modes)</h2>
+            <p class="text-xs text-slate-400 mt-1">Người dùng chuyển đổi linh hoạt qua Web Gateway • Tích hợp an toàn AEB & Crash trên toàn bộ các mode</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">
+            Selectable via Web & CAN 0x120
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
+          
+          <!-- MODE 1 -->
+          <div class="p-5 rounded-2xl bg-slate-950 border border-cyan-800/50 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold text-cyan-400">MODE 1</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">Thủ Công</span>
+              </div>
+              <h3 class="text-lg font-bold text-white mt-2">Manual Control (Lái Tay)</h3>
+              <p class="text-xs text-slate-400 mt-1">Người lái điều khiển trực tiếp hướng và ga từ điện thoại qua giao diện Web.</p>
+
+              <div class="mt-4 space-y-2 text-xs text-slate-300">
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-cyan-300">Lái Vi Sai:</span> Web gửi góc rẽ <span class="font-mono text-cyan-400">Steer (-100 đến +100)</span> và tốc độ <span class="font-mono text-cyan-400">V_target</span>.
+                </div>
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-cyan-300">Tính PWM:</span> 
+                  <div class="font-mono text-[11px] text-slate-300 mt-1">PWM_L = V - ΔV</div>
+                  <div class="font-mono text-[11px] text-slate-300">PWM_R = V + ΔV</div>
+                </div>
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-cyan-300">Chu kỳ CAN:</span> 50 ms (Bản tin <span class="font-mono text-cyan-400">0x100</span>).
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-amber-400 flex items-center gap-1.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <span>Vật cản &lt; 15cm: Tự động phanh ngắt ga tức thì!</span>
+            </div>
+          </div>
+
+          <!-- MODE 2 -->
+          <div class="p-5 rounded-2xl bg-slate-950 border border-rose-800/50 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold text-rose-400">MODE 2</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">Giữ Tốc Độ</span>
+              </div>
+              <h3 class="text-lg font-bold text-white mt-2">Cruise Control + Bù Dốc</h3>
+              <p class="text-xs text-slate-400 mt-1">Xe tự động duy trì vận tốc cài đặt ổn định bằng vòng lặp kín PID Encoder + Bù dốc MPU-6050.</p>
+
+              <div class="mt-4 space-y-2 text-xs text-slate-300">
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-rose-300">Cài Tốc Độ:</span> Chọn 20, 30, 40 cm/s trên Web (CAN <span class="font-mono text-rose-400">0x130</span>).
+                </div>
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-rose-300">PID Closed Loop:</span> S32K144 tính sai số tốc độ thực đo từ 2 Encoder sau chu kỳ 20ms.
+                </div>
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-rose-300">Bù dốc Feedforward:</span> Nhận góc Pitch từ MPU-6050 (CAN <span class="font-mono text-purple-400">0x300</span>) để tự bơm thêm ga khi leo dốc.
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-amber-400 flex items-center gap-1.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <span>Vật cản &lt; 15cm: Tắt Cruise, ngắt motor lập tức!</span>
+            </div>
+          </div>
+
+          <!-- MODE 3 -->
+          <div class="p-5 rounded-2xl bg-slate-950 border border-emerald-800/50 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold text-emerald-400">MODE 3</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">Tự Hành Map Ảo</span>
+              </div>
+              <h3 class="text-lg font-bold text-white mt-2">Map Ảo Tích Hợp Cruise</h3>
+              <p class="text-xs text-slate-400 mt-1">Xe tự bám lộ trình Waypoint định sẵn; tích hợp Cruise Control giữ tốc độ đều và Gyro bẻ góc.</p>
+
+              <div class="mt-4 space-y-2 text-xs text-slate-300">
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-emerald-300">Định Tuyến:</span> Ví dụ Route 1: [Tiến 150cm] $\rightarrow$ [Quay phải $90^\circ$] $\rightarrow$ [Tiến 100cm] $\rightarrow$ [Dừng].
+                </div>
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-emerald-300">Odometry:</span> Encoder đo quãng đường thẳng chính xác từng cm với vận tốc Cruise ổn định.
+                </div>
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-bold text-emerald-300">Xoay Góc Vi Sai:</span> Động cơ quay ngược chiều nhau đến khi Gyro MPU-6050 đạt đủ $90^\circ$.
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-emerald-400 flex items-center gap-1.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Gặp cản: PAUSE lộ trình; cản đi qua: RESUME chạy tiếp!</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: MA TRẬN CAN (CAN MATRIX DBC) -->
+    <!-- ========================================== -->
+    <section id="tab-can-matrix" class="space-y-6 hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-white">Bảng Ma Trận Bản Tin CAN (CAN DBC Matrix Specification)</h2>
+            <p class="text-xs text-slate-400 mt-1">Chuẩn 11-bit Identifier (CAN 2.0A) • Quy định thứ tự ưu tiên trọng tài bus (Arbitration)</p>
+          </div>
+          <div class="text-xs font-mono px-3 py-1.5 rounded-lg bg-slate-950 text-cyan-400 border border-slate-800">
+            Tốc độ: 500 kbps • Bus Load dự kiến &lt; 25%
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-950 text-slate-400 uppercase border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">CAN ID</th>
+                <th class="p-3.5">Tên Bản Tin</th>
+                <th class="p-3.5">Node Phát</th>
+                <th class="p-3.5">Chu Kỳ</th>
+                <th class="p-3.5">DLC</th>
+                <th class="p-3.5">Cấu Trúc Dữ Liệu Từng Byte</th>
+                <th class="p-3.5">Ưu Tiên</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70 text-slate-300">
+              <!-- 0x020 -->
+              <tr class="bg-rose-950/20 hover:bg-rose-900/30">
+                <td class="p-3.5 text-rose-400 font-bold">0x020</td>
+                <td class="p-3.5 font-bold text-white">CRASH_EVENT</td>
+                <td class="p-3.5 text-purple-400 font-semibold">Node 4 (Cluster)</td>
+                <td class="p-3.5 text-amber-300">Event (Va chạm)</td>
+                <td class="p-3.5">2</td>
+                <td class="p-3.5">B0: Cờ va chạm (0xAA) • B1: Gia tốc đỉnh (-2.5g)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-rose-900 text-rose-200 text-[10px] font-bold">Ưu tiên 1 (Cao nhất)</span></td>
+              </tr>
+              <!-- 0x050 -->
+              <tr class="bg-amber-950/20 hover:bg-amber-900/30">
+                <td class="p-3.5 text-amber-400 font-bold">0x050</td>
+                <td class="p-3.5 font-bold text-white">AEB_TRIGGER</td>
+                <td class="p-3.5 text-amber-400 font-semibold">Node 3 (ADAS)</td>
+                <td class="p-3.5 text-amber-300">Event (Cản &lt;15cm)</td>
+                <td class="p-3.5">2</td>
+                <td class="p-3.5">B0: Lệnh phanh khẩn (0x01: Dừng, 0x00: Nhả) • B1: Khoảng cách cản (cm)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-amber-900 text-amber-200 text-[10px] font-bold">Ưu tiên 2</span></td>
+              </tr>
+              <!-- 0x100 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-cyan-400 font-bold">0x100</td>
+                <td class="p-3.5 font-bold text-white">MANUAL_CONTROL</td>
+                <td class="p-3.5 text-cyan-400 font-semibold">Node 1 (Gateway)</td>
+                <td class="p-3.5">50 ms</td>
+                <td class="p-3.5">3</td>
+                <td class="p-3.5">B0: V_target (0-100%) • B1: Steer (-100..+100) • B2: Hướng (0:Stop, 1:Fwd, 2:Rev)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-blue-900 text-blue-200 text-[10px]">Cao</span></td>
+              </tr>
+              <!-- 0x120 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-cyan-400 font-bold">0x120</td>
+                <td class="p-3.5 font-bold text-white">AUTO_MODE_CMD</td>
+                <td class="p-3.5 text-cyan-400 font-semibold">Node 1 (Gateway)</td>
+                <td class="p-3.5 text-amber-300">Event</td>
+                <td class="p-3.5">2</td>
+                <td class="p-3.5">B0: Mode (0:Manual, 1:Cruise, 2:Auto Map) • B1: Route ID (1, 2)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-blue-900 text-blue-200 text-[10px]">Cao</span></td>
+              </tr>
+              <!-- 0x130 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-cyan-400 font-bold">0x130</td>
+                <td class="p-3.5 font-bold text-white">CRUISE_SET</td>
+                <td class="p-3.5 text-cyan-400 font-semibold">Node 1 (Gateway)</td>
+                <td class="p-3.5 text-amber-300">Event</td>
+                <td class="p-3.5">2</td>
+                <td class="p-3.5">B0: Vận tốc Cruise cài đặt (cm/s) • B1: Enable Flag (1/0)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-blue-900 text-blue-200 text-[10px]">Cao</span></td>
+              </tr>
+              <!-- 0x200 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-rose-400 font-bold">0x200</td>
+                <td class="p-3.5 font-bold text-white">ODOMETRY_SPEED</td>
+                <td class="p-3.5 text-rose-400 font-semibold">Node 2 (Powertrain)</td>
+                <td class="p-3.5">50 ms</td>
+                <td class="p-3.5">4</td>
+                <td class="p-3.5">B0-B1: Vận tốc thực tế Encoder (cm/s) • B2-B3: Tổng quãng đường chạy (cm)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Trung Bình</span></td>
+              </tr>
+              <!-- 0x250 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-amber-400 font-bold">0x250</td>
+                <td class="p-3.5 font-bold text-white">DISTANCE_OBSTACLE</td>
+                <td class="p-3.5 text-amber-400 font-semibold">Node 3 (ADAS)</td>
+                <td class="p-3.5">100 ms</td>
+                <td class="p-3.5">3</td>
+                <td class="p-3.5">B0: Cự ly ToF Trước (cm) • B1: ToF Trái (cm) • B2: ToF Phải (cm)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Trung Bình</span></td>
+              </tr>
+              <!-- 0x300 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-purple-400 font-bold">0x300</td>
+                <td class="p-3.5 font-bold text-white">INCLINE_DATA</td>
+                <td class="p-3.5 text-purple-400 font-semibold">Node 4 (Cluster)</td>
+                <td class="p-3.5">50 ms</td>
+                <td class="p-3.5">2</td>
+                <td class="p-3.5">B0-B1: Góc dốc Pitch từ MPU-6050 (độ x 10, cấp số bù ga khi leo dốc)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Trung Bình</span></td>
+              </tr>
+              <!-- 0x350 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-purple-400 font-bold">0x350</td>
+                <td class="p-3.5 font-bold text-white">BATTERY_STATUS</td>
+                <td class="p-3.5 text-purple-400 font-semibold">Node 4 (Cluster)</td>
+                <td class="p-3.5">500 ms</td>
+                <td class="p-3.5">2</td>
+                <td class="p-3.5">B0: Điện áp Pin (0.1V, ví dụ 118 = 11.8V) • B1: Dung lượng Pin (0 - 100%)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Thấp</span></td>
+              </tr>
+              <!-- 0x700 - 0x703 -->
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-3.5 text-slate-400 font-bold">0x700 - 0x703</td>
+                <td class="p-3.5 font-bold text-white">HEARTBEAT_NODES</td>
+                <td class="p-3.5 text-slate-400 font-semibold">Cả 4 Node</td>
+                <td class="p-3.5">200 ms</td>
+                <td class="p-3.5">1</td>
+                <td class="p-3.5">B0: Mã trạng thái (0x00: OK, 0x01: Lỗi ngoại vi, Quá 600ms = OFFLINE)</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Giám Sát Mạng</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: LUỒNG DỮ LIỆU (DATAFLOW & SCENARIOS) -->
+    <!-- ========================================== -->
+    <section id="tab-dataflow" class="space-y-6 hidden">
+      
+      <!-- SCENARIO 1 & 2 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- KỊCH BẢN 1: TỰ HÀNH MAP ẢO & PHANH AEB -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <span class="text-xs font-bold text-amber-400 font-mono">KỊCH BẢN 1</span>
+            <span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">Tự Hành + Phanh AEB</span>
+          </div>
+          <h3 class="text-base font-bold text-white">Lộ Trình Map Ảo & Can Thiệp Khẩn Cấp (Pause / Resume)</h3>
+          
+          <!-- Flow Steps -->
+          <div class="space-y-3 font-mono text-xs">
+            <div class="p-3 rounded-xl bg-slate-950 border border-cyan-800/60 flex items-start gap-3">
+              <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 font-bold border border-cyan-800">BƯỚC 1</span>
+              <div>
+                <div class="text-white font-bold">Người dùng bấm bắt đầu Route 1 trên Web</div>
+                <div class="text-slate-400 text-[11px] mt-0.5">ESP32 phát <span class="text-cyan-400">CAN 0x120</span>: S32K144 khởi động bộ đếm quãng đường Odometry Encoder (Tiến 150cm với Cruise 30cm/s).</div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-950 border border-rose-800/80 flex items-start gap-3">
+              <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-400 font-bold border border-rose-800">BƯỚC 2</span>
+              <div>
+                <div class="text-rose-400 font-bold">Vật cản nhảy ra trước đầu xe (&lt; 15cm)</div>
+                <div class="text-slate-400 text-[11px] mt-0.5">STM32 ADAS (Node 3) bắn ngay <span class="text-amber-400 font-bold">CAN 0x050 (AEB_TRIGGER)</span>. S32K144 ghi đè lệnh, <span class="text-rose-400 font-bold">PAUSE</span> lộ trình, cắt PWM motor dừng xe tại chỗ!</div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-950 border border-purple-800/60 flex items-start gap-3">
+              <span class="px-2 py-0.5 rounded bg-purple-950 text-purple-400 font-bold border border-purple-800">BƯỚC 3</span>
+              <div>
+                <div class="text-white font-bold">Cluster Báo Động & Hiển Thị LCD</div>
+                <div class="text-slate-400 text-[11px] mt-0.5">Node 4 bắt bản tin <span class="text-amber-400">0x050</span>: Bật còi hú, nhấp nháy đèn phanh đỏ, hiển thị dòng cảnh báo <span class="text-rose-400 font-bold">"AEB ACTIVE!"</span> lên màn hình LCD.</div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-950 border border-emerald-800/60 flex items-start gap-3">
+              <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold border border-emerald-800">BƯỚC 4</span>
+              <div>
+                <div class="text-emerald-400 font-bold">Vật cản rời đi an toàn (&gt; 30cm)</div>
+                <div class="text-slate-400 text-[11px] mt-0.5">Node 3 phát <span class="text-emerald-400">0x050 (Stop=0)</span>. S32K144 tự động <span class="text-emerald-400 font-bold">RESUME</span> lộ trình, xe chạy tiếp phần đường còn lại trên Map ảo.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KỊCH BẢN 2: CRUISE CONTROL & MPU-6050 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <span class="text-xs font-bold text-purple-400 font-mono">KỊCH BẢN 2</span>
+            <span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-800">Cruise & MPU-6050</span>
+          </div>
+          <h3 class="text-base font-bold text-white">Duy Trì Vận Tốc, Bù Ga Leo Dốc & Va Chạm Túi Khí</h3>
+
+          <!-- Details -->
+          <div class="space-y-3 font-mono text-xs">
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+              <div class="flex items-center justify-between text-white font-bold mb-1">
+                <span class="text-purple-400">TÍNH NĂNG 1: BÙ GA LEO DỐC (HILL ASSIST)</span>
+                <span class="text-slate-400 text-[11px]">CAN 0x300</span>
+              </div>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Khi xe leo dốc, trọng lực làm giảm tốc độ. Node 4 đọc góc Pitch từ MPU-6050 và phát lên CAN mỗi 50ms. S32K144 bù ga tức thì qua đại lượng Feedforward:
+              </p>
+              <div class="p-2 rounded bg-slate-900 text-cyan-300 text-center font-mono my-2 border border-slate-800">
+                u_FF = K_pitch * sin(Pitch_Angle)
+              </div>
+              <p class="text-slate-500 text-[10px]">Giúp vận tốc Cruise không bị trễ hoặc tụt đột ngột khi gặp đoạn dốc cao.</p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-rose-900/60">
+              <div class="flex items-center justify-between text-white font-bold mb-1">
+                <span class="text-rose-400">TÍNH NĂNG 2: CẢM BIẾN VA CHẠM TÚI KHÍ (CRASH)</span>
+                <span class="text-rose-400 text-[11px]">CAN 0x020 (P1)</span>
+              </div>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Khi xe đâm chướng ngại cứng, gia tốc âm dọc xe giảm đột ngột ($a_x &lt; -2.5g$). MPU-6050 kích hoạt ngắt phần cứng:
+              </p>
+              <div class="p-2 rounded bg-rose-950/40 text-rose-300 text-center font-mono my-2 border border-rose-900/60 font-bold">
+                BẮN CAN 0x020 -&gt; HÃM NGẮN MẠCH MOTOR DỪNG KHẨN!
+              </div>
+              <p class="text-slate-500 text-[10px]">Toàn bộ xe ngắt ga, cụm BCM nhấp nháy đèn khẩn cấp Hazard và phát còi cảnh báo.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SCENARIO 3: GIÁM SÁT MẠNG CAN (HEARTBEAT FAILSAFE) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-cyan-400 font-mono">KỊCH BẢN 3</span>
+            <span class="text-xs text-slate-400">•</span>
+            <span class="text-sm font-bold text-white">Giám Sát Mạng CAN (Network Management & Failsafe Handling)</span>
+          </div>
+          <span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">Heartbeat 200ms</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <div class="font-bold text-cyan-400">1. Phát Nhịp Tim Định Kỳ</div>
+            <p class="text-slate-400 text-[11px]">
+              Tất cả 4 node định kỳ gửi bản tin Heartbeat (CAN <span class="text-cyan-300">0x700 - 0x703</span>) mỗi 200ms chứa mã chẩn đoán nội bộ.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <div class="font-bold text-amber-400">2. Phát Hiện Node Treo (Timeout)</div>
+            <p class="text-slate-400 text-[11px]">
+              Node 4 (LCD) và Node 1 (Web) chạy 4 bộ đếm. Nếu node nào quá 600ms không có nhịp tim $\rightarrow$ đánh dấu ngay là <span class="text-rose-400 font-bold">OFFLINE/FAIL</span>.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950 border border-rose-800 space-y-2">
+            <div class="font-bold text-rose-400">3. Failsafe Xe Tự Dừng</div>
+            <p class="text-slate-400 text-[11px]">
+              Nếu S32K144 phát hiện mất kết nối với Gateway hoặc Node ADAS quá 500ms $\rightarrow$ tự động hạ tốc độ về 0 an toàn.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: LINH KIỆN & CHÂN NỐI (BOM & PINOUT) -->
+    <!-- ========================================== -->
+    <section id="tab-hardware" class="space-y-6 hidden">
+      
+      <!-- BOM TABLE -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold text-white">Danh Mục Linh Kiện Chi Tiết (Bill of Materials - BOM)</h2>
+          <span class="text-xs font-mono text-slate-400">Đã chốt cấu hình thực tế</span>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-950 text-slate-400 uppercase border-b border-slate-800">
+              <tr>
+                <th class="p-3">Hạng Mục</th>
+                <th class="p-3">Tên Linh Kiện</th>
+                <th class="p-3">Số Lượng</th>
+                <th class="p-3">Thông Số Kỹ Thuật</th>
+                <th class="p-3">Vai Trò Trong Hệ Thống</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70 text-slate-300">
+              <tr>
+                <td class="p-3 text-cyan-400 font-semibold">Vi Điều Khiển</td>
+                <td class="p-3 font-bold text-white">ESP32-WROOM-32</td>
+                <td class="p-3">1</td>
+                <td class="p-3">2.4 GHz Wi-Fi, 3.3V Logic</td>
+                <td class="p-3 text-slate-400">Node 1: Telematics Web Gateway</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-rose-400 font-semibold">Vi Điều Khiển</td>
+                <td class="p-3 font-bold text-white">NXP S32K144 EVB</td>
+                <td class="p-3">1</td>
+                <td class="p-3">ARM Cortex-M4F Automotive</td>
+                <td class="p-3 text-slate-400">Node 2: Main ECU Powertrain & PID Cruise</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-amber-400 font-semibold">Vi Điều Khiển</td>
+                <td class="p-3 font-bold text-white">STM32F103C8T6 (Blue Pill)</td>
+                <td class="p-3">2</td>
+                <td class="p-3">ARM Cortex-M3, 72MHz, 3.3V</td>
+                <td class="p-3 text-slate-400">Node 3 (ADAS ToF) & Node 4 (Cluster/BCM)</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-emerald-400 font-semibold">CAN Transceiver</td>
+                <td class="p-3 font-bold text-white">Module SN65HVD230 / VP230</td>
+                <td class="p-3">4</td>
+                <td class="p-3">Chạy nguồn 3.3V rời, tốc độ 1Mbps</td>
+                <td class="p-3 text-slate-400">Transceiver rời cho cả 4 Node (đồng bộ mức áp)</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-slate-400 font-semibold">Trở Bus</td>
+                <td class="p-3 font-bold text-white">Điện trở 120Ω 1/4W</td>
+                <td class="p-3">2</td>
+                <td class="p-3">Sai số 1%</td>
+                <td class="p-3 text-slate-400">Đấu song song 2 đầu xa nhất của bus CAN</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-blue-400 font-semibold">Động Lực</td>
+                <td class="p-3 font-bold text-white">Driver Cầu H L298N</td>
+                <td class="p-3">1</td>
+                <td class="p-3">Dòng đỉnh 2A/kênh, cấp áp 7.4V - 12V</td>
+                <td class="p-3 text-slate-400">Điều khiển lái vi sai 2 động cơ DC sau</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-blue-400 font-semibold">Động Cơ</td>
+                <td class="p-3 font-bold text-white">Động cơ DC giảm tốc kèm Encoder</td>
+                <td class="p-3">2</td>
+                <td class="p-3">Encoder Hall 2 kênh A/B</td>
+                <td class="p-3 text-slate-400">Kéo 2 bánh sau và phản hồi tốc độ thực tế</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-blue-400 font-semibold">Cơ Khí</td>
+                <td class="p-3 font-bold text-white">Bánh xe mắt trâu (Caster Wheel)</td>
+                <td class="p-3">1</td>
+                <td class="p-3">Xoay tự do 360 độ</td>
+                <td class="p-3 text-slate-400">Lắp ở đầu trước xe (chịu tải và xoay tự do)</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-amber-400 font-semibold">Cảm Biến</td>
+                <td class="p-3 font-bold text-white">Laser ToF VL53L0X</td>
+                <td class="p-3">2 – 3</td>
+                <td class="p-3">Khoảng cách đo tới 2m, I2C</td>
+                <td class="p-3 text-slate-400">Cảm biến cự ly phía trước và 2 bên góc đầu xe</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-purple-400 font-semibold">Cảm Biến</td>
+                <td class="p-3 font-bold text-white">IMU MPU-6050</td>
+                <td class="p-3">1</td>
+                <td class="p-3">3-Axis Accel + 3-Axis Gyro, I2C</td>
+                <td class="p-3 text-slate-400">Đo độ dốc bù ga & Phát hiện va chạm túi khí</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-purple-400 font-semibold">Hiển Thị</td>
+                <td class="p-3 font-bold text-white">Màn hình LCD 2004 I2C / OLED</td>
+                <td class="p-3">1</td>
+                <td class="p-3">20 ký tự x 4 dòng hoặc OLED 0.96"</td>
+                <td class="p-3 text-slate-400">Cụm táp-lô hiển thị vận tốc, pin, heartbeat node</td>
+              </tr>
+              <tr>
+                <td class="p-3 text-emerald-400 font-semibold">Nguồn Điện</td>
+                <td class="p-3 font-bold text-white">Pin Li-ion 3S (11.1V - 12.6V) + 2 Buck</td>
+                <td class="p-3">1 bộ</td>
+                <td class="p-3">LM2596/XL4015 hạ 5V Logic & 7.4V Motor</td>
+                <td class="p-3 text-slate-400">Hệ thống nguồn chính cách ly</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PINOUT 4 NODES -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        <!-- PINOUT NODE 1 -->
+        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+          <div class="text-xs font-bold text-cyan-400 font-mono pb-2 border-b border-slate-800">PINOUT: ESP32 (NODE 1)</div>
+          <div class="text-[11px] font-mono space-y-1.5 text-slate-300">
+            <div class="flex justify-between"><span class="text-slate-500">GPIO 5:</span><span class="text-white">CAN_TX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">GPIO 4:</span><span class="text-white">CAN_RX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">3V3 / GND:</span><span class="text-white">Nguồn 3.3V Logic</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Antenna:</span><span class="text-white">Wi-Fi AP Onboard</span></div>
+          </div>
+        </div>
+
+        <!-- PINOUT NODE 2 -->
+        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+          <div class="text-xs font-bold text-rose-400 font-mono pb-2 border-b border-slate-800">PINOUT: S32K144 (NODE 2)</div>
+          <div class="text-[11px] font-mono space-y-1.5 text-slate-300">
+            <div class="flex justify-between"><span class="text-slate-500">PTE5:</span><span class="text-white">CAN0_TX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PTE4:</span><span class="text-white">CAN0_RX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PTD0/1:</span><span class="text-white">L298N IN1/IN2 (Motor L)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PTD2/3:</span><span class="text-white">L298N IN3/IN4 (Motor R)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PTD15:</span><span class="text-white">PWM_ENA (FTM Ch0)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PTD16:</span><span class="text-white">PWM_ENB (FTM Ch1)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PTA0/1:</span><span class="text-white">Encoder Trái (Kênh A,B)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PTA6/7:</span><span class="text-white">Encoder Phải (Kênh A,B)</span></div>
+          </div>
+        </div>
+
+        <!-- PINOUT NODE 3 -->
+        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+          <div class="text-xs font-bold text-amber-400 font-mono pb-2 border-b border-slate-800">PINOUT: STM32 ADAS (NODE 3)</div>
+          <div class="text-[11px] font-mono space-y-1.5 text-slate-300">
+            <div class="flex justify-between"><span class="text-slate-500">PB9:</span><span class="text-white">CAN_TX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PB8:</span><span class="text-white">CAN_RX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PB6 (SCL):</span><span class="text-white">I2C ToF Laser SCL</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PB7 (SDA):</span><span class="text-white">I2C ToF Laser SDA</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PA4/PA5:</span><span class="text-white">XSHUT Chọn ID ToF</span></div>
+          </div>
+        </div>
+
+        <!-- PINOUT NODE 4 -->
+        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+          <div class="text-xs font-bold text-purple-400 font-mono pb-2 border-b border-slate-800">PINOUT: STM32 CLUSTER (NODE 4)</div>
+          <div class="text-[11px] font-mono space-y-1.5 text-slate-300">
+            <div class="flex justify-between"><span class="text-slate-500">PB9:</span><span class="text-white">CAN_TX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PB8:</span><span class="text-white">CAN_RX (Transceiver)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PB10/11:</span><span class="text-white">I2C LCD 2004 & MPU-6050</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PA0:</span><span class="text-white">ADC Đo Áp Cầu Trở Pin</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PA1/PA2:</span><span class="text-white">LED Xi-nhan Trái/Phải</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PA3:</span><span class="text-white">LED Đèn Phanh (Đỏ)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">PA4:</span><span class="text-white">Còi Buzzer Cảnh Báo</span></div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 6: LỘ TRÌNH TRIỂN KHAI (ROADMAP) -->
+    <!-- ========================================== -->
+    <section id="tab-roadmap" class="space-y-6 hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div>
+          <h2 class="text-xl font-bold text-white">Lộ Trình Triển Khai Hệ Thống 4 Giai Đoạn (Development Roadmap)</h2>
+          <p class="text-xs text-slate-400 mt-1">Phương pháp tiếp cận theo từng module độc lập rồi tích hợp lên mạng trục CAN</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          
+          <!-- PHASE 1 -->
+          <div class="p-5 rounded-2xl bg-slate-950 border border-cyan-800/60 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold text-cyan-400">GIAI ĐOẠN 1</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">CAN Bus Link</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Thông Tuyến Mạng CAN Bus</h3>
+              <p class="text-xs text-slate-400">Kết nối vật lý bus 2 dây, gắn trở $120\Omega$, cấu hình baudrate 500 kbps cho các transceiver rời SN65HVD230.</p>
+              
+              <div class="pt-2 space-y-1.5 text-xs text-slate-300 font-mono">
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Gửi bản tin đếm mẫu giữa S32K144 & ESP32.
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Kiểm tra không có lỗi CAN Bus-Off.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PHASE 2 -->
+          <div class="p-5 rounded-2xl bg-slate-950 border border-rose-800/60 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold text-rose-400">GIAI ĐOẠN 2</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">Powertrain</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Động Cơ, Lái Vi Sai & Cruise Control</h3>
+              <p class="text-xs text-slate-400">Lập trình S32K144 đọc Encoder Hall, xuất PWM điều khiển L298N chạy 2 bánh sau và viết thuật toán PID duy trì tốc độ.</p>
+              
+              <div class="pt-2 space-y-1.5 text-xs text-slate-300 font-mono">
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Thử nghiệm rẽ trái/phải vi sai.
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Tuning tham số Kp, Ki của Cruise Control.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PHASE 3 -->
+          <div class="p-5 rounded-2xl bg-slate-950 border border-amber-800/60 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold text-amber-400">GIAI ĐOẠN 3</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">ADAS Safety</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Cảm Biến ToF & Phanh Khẩn Cấp AEB</h3>
+              <p class="text-xs text-slate-400">Lập trình STM32 ADAS đọc khoảng cách Laser ToF. Bắn bản tin CAN ID 0x050 ưu tiên cao ngắt ga khi gặp cản.</p>
+              
+              <div class="pt-2 space-y-1.5 text-xs text-slate-300 font-mono">
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Kiểm tra xe phanh dừng tức thì khi đang chạy.
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Nhả phanh khi cản di chuyển ra xa.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PHASE 4 -->
+          <div class="p-5 rounded-2xl bg-slate-950 border border-purple-800/60 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-bold text-purple-400">GIAI ĐOẠN 4</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-800">Cluster & Map</span>
+              </div>
+              <h3 class="text-base font-bold text-white">Cluster, MPU-6050 & Tự Hành Map Ảo</h3>
+              <p class="text-xs text-slate-400">Ghép LCD hiển thị, kích hoạt tính năng bù dốc và va chạm MPU-6050. Viết kịch bản tự hành theo Map ảo.</p>
+              
+              <div class="pt-2 space-y-1.5 text-xs text-slate-300 font-mono">
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Chạy tự động theo lộ trình Waypoint.
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-emerald-400">✓</span> Hiển thị nhịp tim Heartbeat của 4 Node lên LCD.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JAVASCRIPT FOR TAB SWITCHING -->
+  <script>
+    const tabNames = ['architecture', 'modes', 'can-matrix', 'dataflow', 'hardware', 'roadmap'];
+
+    function switchTab(activeTab) {
+      tabNames.forEach(name => {
+        const section = document.getElementById(`tab-${name}`);
+        const btn = document.getElementById(`tab-btn-${name}`);
+        if (name === activeTab) {
+          section.classList.remove('hidden');
+          btn.className = 'px-3 py-1.5 rounded-lg bg-cyan-600 text-white font-semibold transition whitespace-nowrap shadow-sm';
+        } else {
+          section.classList.add('hidden');
+          btn.className = 'px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-800';
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
