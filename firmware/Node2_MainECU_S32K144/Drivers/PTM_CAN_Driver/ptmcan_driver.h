@@ -7,14 +7,22 @@
 #include "S32K144.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
-#ifndef STATUS_SUCCESS
+#if defined(__has_include)
+  #if __has_include("status.h")
+    #include "status.h"
+  #endif
+#endif
+
+#ifndef STATUS_H
+#define STATUS_H
 typedef enum {
     STATUS_SUCCESS                 = 0x000U,
     STATUS_ERROR                   = 0x001U,
     STATUS_BUSY                    = 0x002U,
     STATUS_TIMEOUT                 = 0x003U,
-    STATUS_CAN_BUFF_OUT_OF_RANGE   = 0x301U
+    STATUS_CAN_BUFF_OUT_OF_RANGE   = 0x300U
 } status_t;
 #endif
 

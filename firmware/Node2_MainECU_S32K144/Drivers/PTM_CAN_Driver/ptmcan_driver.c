@@ -162,6 +162,14 @@ status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config)
             S32_NVIC->ISER[CAN0_ORed_0_15_MB_IRQn / 32U] = (1U << (CAN0_ORed_0_15_MB_IRQn % 32U));
             S32_NVIC->ISER[CAN0_ORed_16_31_MB_IRQn / 32U] = (1U << (CAN0_ORed_16_31_MB_IRQn % 32U));
         }
+        else if (instance == 1U)
+        {
+            S32_NVIC->ISER[CAN1_ORed_0_15_MB_IRQn / 32U] = (1U << (CAN1_ORed_0_15_MB_IRQn % 32U));
+        }
+        else if (instance == 2U)
+        {
+            S32_NVIC->ISER[CAN2_ORed_0_15_MB_IRQn / 32U] = (1U << (CAN2_ORed_0_15_MB_IRQn % 32U));
+        }
     }
 
     // 10. Thoat Freeze Mode de bat dau lam viec
@@ -182,6 +190,14 @@ status_t PTMCAN_DeInit(uint8_t instance)
     {
         S32_NVIC->ICER[CAN0_ORed_0_15_MB_IRQn / 32U] = (1U << (CAN0_ORed_0_15_MB_IRQn % 32U));
         S32_NVIC->ICER[CAN0_ORed_16_31_MB_IRQn / 32U] = (1U << (CAN0_ORed_16_31_MB_IRQn % 32U));
+    }
+    else if (instance == 1U)
+    {
+        S32_NVIC->ICER[CAN1_ORed_0_15_MB_IRQn / 32U] = (1U << (CAN1_ORed_0_15_MB_IRQn % 32U));
+    }
+    else if (instance == 2U)
+    {
+        S32_NVIC->ICER[CAN2_ORed_0_15_MB_IRQn / 32U] = (1U << (CAN2_ORed_0_15_MB_IRQn % 32U));
     }
 
     // Tat module (MDIS = 1) va tat clock PCC
@@ -302,6 +318,7 @@ status_t PTMCAN_Transmit(uint8_t instance, uint8_t mb_idx, const ptmcan_msgbuff_
     mb[2] = data_w0;
     mb[3] = data_w1;
 
+    base->IFLAG1 = (1U << mb_idx);
     // 4. Kich hoat truyen: CODE = TX_DATA (0xC), DLC, IDE = 0, RTR = 0
     mb[0] = (CAN_MB_CODE_TX_DATA << 24U) | ((uint32_t)tx_msg->data_len << 16U);
 
@@ -391,6 +408,7 @@ status_t PTMCAN_AbortTx(uint8_t instance, uint8_t mb_idx)
 }
 
 // Cac ham xu ly ngat cho PTMCAN
+
 void PTMCAN_RegisterRxCallback(uint8_t instance, ptmcan_callback_t callback)
 {
     if (instance < 3U)
@@ -440,6 +458,56 @@ void CAN0_ORed_16_31_MB_IRQHandler(void)
                 if (s_rxCallback[0] != NULL)
                 {
                     s_rxCallback[0](0U, mb_idx, &rx_frame);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief Trinh phuc vu ngat chung cho cac MB tu 0->15 cua PTMCAN1
+ */
+void CAN1_ORed_0_15_MB_IRQHandler(void)
+{
+    uint32_t iflag = CAN1->IFLAG1 & CAN1->IMASK1; // Chi quan tam cac MB co bat ngat
+    ptmcan_msgbuff_t rx_frame;
+
+    for (uint8_t mb_idx = 0U; mb_idx < 16U; mb_idx++)
+    {
+        if (iflag & (1U << mb_idx))
+        {
+            // Thu doc du lieu tu mb
+            if (PTMCAN_Receive(1U, mb_idx, &rx_frame) == STATUS_SUCCESS)
+            {
+                // Bao len Callback tang ung dung
+                if (s_rxCallback[1] != NULL)
+                {
+                    s_rxCallback[1](1U, mb_idx, &rx_frame);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief Trinh phuc vu ngat chung cho cac MB tu 0->15 cua PTMCAN2
+ */
+void CAN2_ORed_0_15_MB_IRQHandler(void)
+{
+    uint32_t iflag = CAN2->IFLAG1 & CAN2->IMASK1; // Chi quan tam cac MB co bat ngat
+    ptmcan_msgbuff_t rx_frame;
+
+    for (uint8_t mb_idx = 0U; mb_idx < 16U; mb_idx++)
+    {
+        if (iflag & (1U << mb_idx))
+        {
+            // Thu doc du lieu tu mb
+            if (PTMCAN_Receive(2U, mb_idx, &rx_frame) == STATUS_SUCCESS)
+            {
+                // Bao len Callback tang ung dung
+                if (s_rxCallback[2] != NULL)
+                {
+                    s_rxCallback[2](2U, mb_idx, &rx_frame);
                 }
             }
         }
