@@ -1,21 +1,21 @@
 #include "ptmcan_driver.h"
 
 /*==========================================================
- * 1. MÃ TRẠNG THÁI CỦA MESSAGE BUFFER TRONG CS WORD
+ * 1. MA TRANG THAI CUA MESSAGE BUFFER TRONG CS WORD
  *==========================================================*/
 
-#define CAN_MB_CODE_RX_INACTIVE         (0x0U)      // MB nhận không hoạt động
-#define CAN_MB_CODE_RX_BUSY             (0x1U)      // Module đang ghi đè vào MB
-#define CAN_MB_CODE_RX_FULL             (0x2U)      // Đã nhận được frame mới
-#define CAN_MB_CODE_RX_EMPTY            (0x4U)      // MB rảnh, đang chờ nhận frame
-#define CAN_MB_CODE_RX_OVERRUN          (0x6U)      // Nhận frame mới đè lên frame cũ chưa đọc
+#define CAN_MB_CODE_RX_INACTIVE         (0x0U)      // MB nhan khong hoat dong
+#define CAN_MB_CODE_RX_BUSY             (0x1U)      // Module dang ghi de vao MB
+#define CAN_MB_CODE_RX_FULL             (0x2U)      // Da nhan duoc frame moi
+#define CAN_MB_CODE_RX_EMPTY            (0x4U)      // MB ranh, dang cho nhan frame
+#define CAN_MB_CODE_RX_OVERRUN          (0x6U)      // Nhan frame moi de len frame cu chua doc
 
-#define CAN_MB_CODE_TX_INACTIVE         (0x8U)      // MB truyền rảnh
-#define CAN_MB_CODE_TX_ABORT            (0x9U)      // Yêu cầu truyền bị hủy
-#define CAN_MB_CODE_TX_DATA             (0xCU)      // Kích hoạt truyền Data frame
-#define CAN_MB_CODE_TX_REMOTE           (0x1CU)     // Kích hoạt truyền Remote frame
+#define CAN_MB_CODE_TX_INACTIVE         (0x8U)      // MB truyen ranh
+#define CAN_MB_CODE_TX_ABORT            (0x9U)      // Yeu cau truyen bi huy
+#define CAN_MB_CODE_TX_DATA             (0xCU)      // Kich hoat truyen Data frame
+#define CAN_MB_CODE_TX_REMOTE           (0x1CU)     // Kich hoat truyen remote frame
 
-// Bảng tra cứu Base Address và PCC Index của 3 kênh CAN
+// Bang tra cuu Base Address va PCC Index cua 3 kenh CAN
 static CAN_Type * const g_canBase[] = { CAN0, CAN1, CAN2 };
 static const uint32_t g_pccCanIndex[] = {
     PCC_FlexCAN0_INDEX,
@@ -23,17 +23,17 @@ static const uint32_t g_pccCanIndex[] = {
     PCC_FlexCAN2_INDEX
 };
 
-// Lưu trữ con trỏ Callback của tầng ứng dụng cho từng kênh
+// Luu tru con tro Callback cua tang ung dung cho tung kenh
 static ptmcan_callback_t s_rxCallback[3] = { NULL, NULL, NULL };
 
 /*==========================================================
- * 2. HÀM PHỤ TRỢ (HELPER FUNCTIONS)
+ * 2. HAM PHU TRO (HELFER FUNCTIONS)
  *==========================================================*/
 
-/**
- * @brief Đảo byte 32-bit (Big-Endian <-> Little-Endian)
- * Giúp dữ liệu Byte 0 của mảng nằm ở byte cao nhất trên bus CAN
- */
+ /**
+  * @brief Dao byte 32-bit (Big-Endian <-> Little-Endian)
+  * Giup du lieu Byte 0 cua mang nam o byte cao nhat tren bus CAN
+  */
 static inline uint32_t ptmcan_swap_bytes(uint32_t val)
 {
     return (((val & 0x000000FFU) << 24U) |
@@ -43,9 +43,9 @@ static inline uint32_t ptmcan_swap_bytes(uint32_t val)
 }
 
 /**
- * @brief Yêu cầu FlexCAN đi vào Freeze Mode và chờ phần cứng xác nhận (FRZACK = 1)
+ * @brief Yeu cau PTMCAN di vao Freeze Mode va cho phan cung xac nhan (FRZACK = 1)
  */
-static status_t ptmcan_enter_freeze_mode(CAN_Type *base)
+static status_t ptmcan_enter_freeze_mode (CAN_Type *base)
 {
     uint32_t timeout = 100000U;
 
@@ -62,7 +62,7 @@ static status_t ptmcan_enter_freeze_mode(CAN_Type *base)
 }
 
 /**
- * @brief Thoát Freeze Mode và chờ FlexCAN sẵn sàng hoạt động (FRZACK = 0, NOTRDY = 0)
+ * @brief Thoat Freeze Mode va cho PTMCAN san sang hoat dong (FRZACK = 0, NOTRDY = 0)
  */
 static status_t ptmcan_exit_freeze_mode(CAN_Type *base)
 {
@@ -81,12 +81,12 @@ static status_t ptmcan_exit_freeze_mode(CAN_Type *base)
 }
 
 /*==========================================================
- * 3. CÁC API CHÍNH CỦA DRIVER
+ * 3. CAC API CHINH CUA DRIVER
  *==========================================================*/
 
-/**
- * @brief Hàm khởi tạo cho CAN
- */
+ /**
+  * @brief Ham khoi tao cho CAN
+  */
 status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config)
 {
     if ((instance >= 3U) || (config == NULL))
@@ -96,47 +96,47 @@ status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config)
 
     CAN_Type *base = g_canBase[instance];
 
-    // 1. Cấp clock cho module FlexCAN thông qua PCC
+    // 1. Cap clock cho module FlexCAN thong qua PCC
     PCC->PCCn[g_pccCanIndex[instance]] |= PCC_PCCn_CGC_MASK;
 
-    // 2. Chọn nguồn clock cho Protocol Engine (Chỉ được ghi khi MDIS = 1)
+    // 2. Chon nguon clock cho Protocol Engine (Chi duoc ghi khi MDIS = 1)
     base->MCR |= CAN_MCR_MDIS_MASK;
-    base->CTRL1 = (base->CTRL1 & ~CAN_CTRL1_CLKSRC_MASK) |
+    base->CTRL1 = (base->CTRL1 & ~ CAN_CTRL1_CLKSRC_MASK) |
                   CAN_CTRL1_CLKSRC(config->clk_src);
 
-    // 3. Bật module FlexCAN (MDIS = 0) và chờ thoát Low-Power Mode
+    // 3. Bat module PTMCAN (MDIS = 0) va cho thoat Low-Power Mode
     base->MCR &= ~CAN_MCR_MDIS_MASK;
-    while (base->MCR & CAN_MCR_LPMACK_MASK) {}
+    while (base->MCR & CAN_MCR_LPMACK_MASK){}
 
-    // 4. Soft Reset để xóa sạch cấu hình cũ
+    // 4. Soft Reset de xoa sach cau hinh cu
     base->MCR |= CAN_MCR_SOFTRST_MASK;
-    while (base->MCR & CAN_MCR_SOFTRST_MASK) {}
+    while (base->MCR & CAN_MCR_SOFTRST_MASK){}
 
-    // 5. Đi vào Freeze Mode để cấu hình thanh ghi CAN
+    // 5. Di vao freeze mode de cau hinh thanh ghi can
     if (ptmcan_enter_freeze_mode(base) != STATUS_SUCCESS)
     {
         return STATUS_TIMEOUT;
     }
 
-    /* 6. Cấu hình MCR
+    /* 6. Cau hinh MCR
      * - MAXMB = max_num_mb - 1
-     * - IRMQ = 1 (Dùng lọc riêng từng MB qua RXIMR)
-     * - SRXDIS = 1 (Tắt tự nhận lại tin mình gửi)
-     * - AEN (Cho phép hủy truyền theo cấu hình)
+     * - IRMQ = 1 (Dung loc rieng tung MB qua RXIMR)
+     * - SRXDIS = 1 (Tat tu nhan lai tin minh gui)
+     * - AEN (Cho phep huy truyen theo cau hinh)
      */
     uint32_t maxmb_val = (config->max_num_mb > 0U) ? (config->max_num_mb - 1U) : 15U;
 
     base->MCR = (base->MCR & ~(CAN_MCR_MAXMB_MASK | CAN_MCR_IRMQ_MASK |
-                               CAN_MCR_SRXDIS_MASK | CAN_MCR_AEN_MASK))
-              | CAN_MCR_MAXMB(maxmb_val)
-              | CAN_MCR_IRMQ(1U)
-              | CAN_MCR_SRXDIS(1U)
-              | CAN_MCR_AEN(config->enable_abort ? 1U : 0U);
+                                CAN_MCR_SRXDIS_MASK | CAN_MCR_AEN_MASK))
+                | CAN_MCR_MAXMB(maxmb_val)
+                | CAN_MCR_IRMQ(1U)
+                | CAN_MCR_SRXDIS(1U)
+                | CAN_MCR_AEN(config->enable_abort ? 1U : 0U);
 
-    // 7. Cấu hình Bit Timing vào thanh ghi CTRL1
-    base->CTRL1 = (base->CTRL1 & ~(CAN_CTRL1_PRESDIV_MASK | CAN_CTRL1_PROPSEG_MASK |
-                                  CAN_CTRL1_PSEG1_MASK   | CAN_CTRL1_PSEG2_MASK   |
-                                  CAN_CTRL1_RJW_MASK     | CAN_CTRL1_LPB_MASK))
+    // 7. Cau hinh Bit Timing vao thanh ghi CTRL1
+    base->CTRL1 = (base->CTRL1 &~ (CAN_CTRL1_PRESDIV_MASK | CAN_CTRL1_PROPSEG_MASK |
+                                   CAN_CTRL1_PSEG1_MASK | CAN_CTRL1_PSEG2_MASK |
+                                   CAN_CTRL1_RJW_MASK | CAN_CTRL1_LPB_MASK))
                 | CAN_CTRL1_PRESDIV(config->bitrate.prediv)
                 | CAN_CTRL1_PROPSEG(config->bitrate.propseg)
                 | CAN_CTRL1_PSEG1(config->bitrate.pseg1)
@@ -144,17 +144,17 @@ status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config)
                 | CAN_CTRL1_RJW(config->bitrate.rjw)
                 | CAN_CTRL1_LPB(config->enable_loopback ? 1U : 0U);
 
-    // 8. Xóa sạch vùng nhớ Message Buffers RAM (128 words tương đương 32 MBs)
+    // 8. Xoa sach vung nho Message Buffers RAM (128 words tuong duong 32 MBs)
     for (uint8_t i = 0U; i < CAN_RAMn_COUNT; i++)
     {
         base->RAMn[i] = 0U;
     }
 
-    // Tắt tất cả ngắt MB và xóa cờ ngắt tồn đọng
+    // Tat tat ca ngat MB va xoa co ngat ton dong
     base->IMASK1 = 0x00000000U;
     base->IFLAG1 = 0xFFFFFFFFU;
 
-    // 9. Bật ngắt NVIC nếu người dùng yêu cầu
+    // 9. bat ngat NVIC neu nguoi dung yeu cau
     if (config->enable_rx_interrupt)
     {
         if (instance == 0U)
@@ -164,26 +164,27 @@ status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config)
         }
     }
 
-    // 10. Thoát Freeze Mode để bắt đầu làm việc
+    // 10. Thoat Freeze Mode de bat dau lam viec
     return ptmcan_exit_freeze_mode(base);
+
 }
 
 /**
- * @brief Hàm hủy cho CAN
+ * @brief Ham huy cho CAN
  */
 status_t PTMCAN_DeInit(uint8_t instance)
 {
     if (instance >= 3U) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
 
-    // Ngắt NVIC
+    // Ngat NVIC
     if (instance == 0U)
     {
         S32_NVIC->ICER[CAN0_ORed_0_15_MB_IRQn / 32U] = (1U << (CAN0_ORed_0_15_MB_IRQn % 32U));
         S32_NVIC->ICER[CAN0_ORed_16_31_MB_IRQn / 32U] = (1U << (CAN0_ORed_16_31_MB_IRQn % 32U));
     }
 
-    // Tắt module (MDIS = 1) và cắt clock PCC
+    // Tat module (MDIS = 1) va tat clock PCC
     base->MCR |= CAN_MCR_MDIS_MASK;
     PCC->PCCn[g_pccCanIndex[instance]] &= ~PCC_PCCn_CGC_MASK;
 
@@ -191,34 +192,34 @@ status_t PTMCAN_DeInit(uint8_t instance)
 }
 
 /**
- * @brief Hàm cấu hình Rx Message Buffer
+ * @brief Ham cau hinh Rx Message Buffer
  */
 status_t PTMCAN_ConfigRxMB(uint8_t instance, uint8_t mb_idx, uint32_t msg_id)
 {
-    if ((instance >= 3U) || (mb_idx >= 32U)) return STATUS_ERROR;
+    if ((instance >= 3U) || (mb_idx >=32U)) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
-    // 1. Đưa MB về INACTIVE trước khi sửa
+    // 1. Dua MB ve INACTIVE truoc khi sua
     mb[0] = (CAN_MB_CODE_RX_INACTIVE << 24U);
 
-    // 2. Cài đặt 11-bit Standard ID (dịch trái 18 bit, IDE = 0)
+    // 2. Cai dat 11 bit Standard ID (dich trai 18 bit, IDE = 0)
     mb[1] = ((msg_id & PTMCAN_STD_ID_MASK) << 18U);
 
-    // 3. Đặt mặt nạ lọc mặc định: Khớp chính xác 100% ID
+    // 3. Dat mat na loc mac dinh, khop chinh xac 100% ID
     PTMCAN_SetRxMask(instance, mb_idx, PTMCAN_MASK_EXACT_MATCH);
 
-    // 4. Kích hoạt MB ở trạng thái rảnh sẵn sàng đón bản tin (RX_EMPTY = 0x4)
+    // 4. Kich hoat MB o trang thai ranh san sangf don ban tin (RX_EMPTY = 0x4)
     mb[0] = (CAN_MB_CODE_RX_EMPTY << 24U);
 
-    // Bật cờ cho phép ngắt của MB này
+    // Bat co cho phep ngat cua MB nay
     base->IMASK1 |= (1U << mb_idx);
 
     return STATUS_SUCCESS;
 }
 
 /**
- * @brief Hàm cấu hình Tx Message Buffer
+ * @brief Ham cau hinh Tx Message Buffer
  */
 status_t PTMCAN_ConfigTxMB(uint8_t instance, uint8_t mb_idx)
 {
@@ -226,41 +227,39 @@ status_t PTMCAN_ConfigTxMB(uint8_t instance, uint8_t mb_idx)
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
-    // Cấu hình MB sẵn sàng truyền: CODE = TX_INACTIVE (0x8)
     mb[0] = (CAN_MB_CODE_TX_INACTIVE << 24U);
     mb[1] = 0U;
     mb[2] = 0U;
     mb[3] = 0U;
 
-    // Tắt ngắt nhận cho MB này
     base->IMASK1 &= ~(1U << mb_idx);
 
     return STATUS_SUCCESS;
 }
 
 /**
- * @brief Cài đặt mặt nạ lọc riêng (RXIMR) cho một hộp thư nhận
+ * @brief Cai dat mat na loc rieng (RXIMR) cho mot hop thu nhan
  */
 status_t PTMCAN_SetRxMask(uint8_t instance, uint8_t mb_idx, uint32_t mask)
 {
     if ((instance >= 3U) || (mb_idx >= 32U)) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
 
-    // Vào Freeze Mode để ghi thanh ghi RXIMR
+    // Vao Freeze Mode de ghi thanh ghi RXIMR
     if (ptmcan_enter_freeze_mode(base) != STATUS_SUCCESS)
     {
         return STATUS_TIMEOUT;
     }
 
-    // Standard ID Mask phải nằm ở bits 28..18
+    // Standard ID Mask phai nam o bits 28...18
     base->RXIMR[mb_idx] = ((mask & PTMCAN_STD_ID_MASK) << 18U);
 
-    // Thoát Freeze Mode
+    // Thoat Freeze Mode
     return ptmcan_exit_freeze_mode(base);
 }
 
 /**
- * @brief Hàm gửi yêu cầu truyền bản tin CAN
+ * @brief Ham gui yeu cau truyen ban tin CAN
  */
 status_t PTMCAN_Transmit(uint8_t instance, uint8_t mb_idx, const ptmcan_msgbuff_t *tx_msg)
 {
@@ -270,19 +269,19 @@ status_t PTMCAN_Transmit(uint8_t instance, uint8_t mb_idx, const ptmcan_msgbuff_
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
-    // Kiểm tra xem MB trước đó đã gửi xong chưa
+    // Kiem tra xem MB truoc do da gui xong chua
     if (PTMCAN_IsMBBusy(instance, mb_idx))
     {
         return STATUS_BUSY;
     }
 
-    // 1. Đặt CODE = INACTIVE trước khi cập nhật nội dung
+    // 1. Dat CODE = INACTIVE truoc khi cap nhat noi dung
     mb[0] = (CAN_MB_CODE_TX_INACTIVE << 24U);
 
-    // 2. Cài đặt ID (Standard 11-bit)
+    // 2. Cai dat ID (Standard 11-bits)
     mb[1] = ((tx_msg->msg_id & PTMCAN_STD_ID_MASK) << 18U);
 
-    // 3. Nạp dữ liệu Data payload (đảo byte để tương thích Big-Endian bus)
+    // 3. Nap du lieu Data payload (dao byte de tuong thich Big-Endian bus)
     uint32_t data_w0 = 0U;
     uint32_t data_w1 = 0U;
 
@@ -303,14 +302,14 @@ status_t PTMCAN_Transmit(uint8_t instance, uint8_t mb_idx, const ptmcan_msgbuff_
     mb[2] = data_w0;
     mb[3] = data_w1;
 
-    // 4. Kích hoạt truyền: CODE = TX_DATA (0xC), DLC, IDE = 0, RTR = 0
+    // 4. Kich hoat truyen: CODE = TX_DATA (0xC), DLC, IDE = 0, RTR = 0
     mb[0] = (CAN_MB_CODE_TX_DATA << 24U) | ((uint32_t)tx_msg->data_len << 16U);
 
     return STATUS_SUCCESS;
 }
 
 /**
- * @brief Hàm nhận bản tin CAN từ hộp thư
+ * @brief Ham nhan CAN
  */
 status_t PTMCAN_Receive(uint8_t instance, uint8_t mb_idx, ptmcan_msgbuff_t *rx_msg)
 {
@@ -319,27 +318,27 @@ status_t PTMCAN_Receive(uint8_t instance, uint8_t mb_idx, ptmcan_msgbuff_t *rx_m
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
-    // 1. Đọc CS word (Thao tác này khóa MB lại)
+    // 1. Doc CS word (Thao tac nay khoa MB lai)
     uint32_t cs = mb[0];
     uint8_t code = (uint8_t)((cs >> 24U) & 0x0FU);
 
-    // Kiểm tra xem MB có nhận tin mới không (RX_FULL = 0x2 hoặc RX_OVERRUN = 0x6)
+    // Kiem tra xem MB co nhan tin moi khong (RX_FULL = 0x2 hoac RX_OVERRUN = 0x6)
     if ((code != CAN_MB_CODE_RX_FULL) && (code != CAN_MB_CODE_RX_OVERRUN))
     {
         return STATUS_ERROR;
     }
 
-    // 2. Đọc CAN ID
+    // 2. Doc CAN ID
     rx_msg->msg_id = (mb[1] >> 18U) & PTMCAN_STD_ID_MASK;
 
-    // 3. Đọc độ dài dữ liệu (DLC)
+    // 3. Doc do dai du lieu (DLC)
     rx_msg->data_len = (uint8_t)((cs >> 16U) & 0x0FU);
     if (rx_msg->data_len > PTMCAN_MAX_PAYLOAD_SIZE)
     {
         rx_msg->data_len = PTMCAN_MAX_PAYLOAD_SIZE;
     }
 
-    // 4. Đọc dữ liệu ra mảng (Giải mã Big-Endian)
+    // 4. Doc du lieu ra mang (Giai ma Big-Endian)
     uint32_t data_w0 = mb[2];
     uint32_t data_w1 = mb[3];
 
@@ -352,17 +351,17 @@ status_t PTMCAN_Receive(uint8_t instance, uint8_t mb_idx, ptmcan_msgbuff_t *rx_m
         rx_msg->data[i] = (uint8_t)((data_w1 >> (24U - ((i - 4U) * 8U))) & 0xFFU);
     }
 
-    // 5. Đọc thanh ghi TIMER để UNLOCK Message Buffer!
+    // 5. Doc thanh ghi timer de unlock MB
     (void)base->TIMER;
 
-    // 6. Xóa cờ ngắt IFLAG1 (Ghi 1 để xóa - W1C)
+    // 6. Xoa co ngat IFLAG1 (Ghi 1 de xoa - W1C)
     base->IFLAG1 = (1U << mb_idx);
 
     return STATUS_SUCCESS;
 }
 
 /**
- * @brief Hàm kiểm tra MB có đang bận truyền không
+ * @brief Ham kiem tra lieu MB co ban khong?
  */
 bool PTMCAN_IsMBBusy(uint8_t instance, uint8_t mb_idx)
 {
@@ -372,12 +371,12 @@ bool PTMCAN_IsMBBusy(uint8_t instance, uint8_t mb_idx)
 
     uint8_t code = (uint8_t)((mb[0] >> 24U) & 0x0FU);
 
-    // MB bận nếu code là TX_DATA (Đang chờ gửi)
+    // MB ban neu code la TX_DATA (Dang cho gui)
     return (code == CAN_MB_CODE_TX_DATA);
 }
 
 /**
- * @brief Hàm hủy truyền cho Message Buffer
+ * @brief Ham khoa ABORT cho Message Buffer
  */
 status_t PTMCAN_AbortTx(uint8_t instance, uint8_t mb_idx)
 {
@@ -385,13 +384,13 @@ status_t PTMCAN_AbortTx(uint8_t instance, uint8_t mb_idx)
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
-    // Ghi mã ABORT (0x9) vào trường CODE của MB
+    // Ghi ma ABORT (0x9) vao truong code cua MB
     mb[0] = (CAN_MB_CODE_TX_ABORT << 24U);
 
     return STATUS_SUCCESS;
 }
 
-// Các hàm xử lý ngắt cho PTMCAN
+// Cac ham xu ly ngat cho PTMCAN
 void PTMCAN_RegisterRxCallback(uint8_t instance, ptmcan_callback_t callback)
 {
     if (instance < 3U)
@@ -401,21 +400,21 @@ void PTMCAN_RegisterRxCallback(uint8_t instance, ptmcan_callback_t callback)
 }
 
 /**
- * @brief Trình phục vụ ngắt chung cho các MB từ 0->15 của FlexCAN0
+ * @brief Trinh phuc vu ngat chung cho cac MB tu 0->15 cua PTMCAN0
  */
 void CAN0_ORed_0_15_MB_IRQHandler(void)
 {
-    uint32_t iflag = CAN0->IFLAG1 & CAN0->IMASK1; // Chỉ quan tâm các MB có bật ngắt
+    uint32_t iflag = CAN0->IFLAG1 & CAN0->IMASK1; // Chi quan tam cac MB co bat ngat
     ptmcan_msgbuff_t rx_frame;
 
     for (uint8_t mb_idx = 0U; mb_idx < 16U; mb_idx++)
     {
         if (iflag & (1U << mb_idx))
         {
-            // Thử đọc dữ liệu từ MB
+            // Thu doc du lieu tu mb
             if (PTMCAN_Receive(0U, mb_idx, &rx_frame) == STATUS_SUCCESS)
             {
-                // Báo lên Callback tầng ứng dụng
+                // Bao len Callback tang ung dung
                 if (s_rxCallback[0] != NULL)
                 {
                     s_rxCallback[0](0U, mb_idx, &rx_frame);
@@ -425,22 +424,19 @@ void CAN0_ORed_0_15_MB_IRQHandler(void)
     }
 }
 
-/**
- * @brief Trình phục vụ ngắt chung cho các MB từ 16->31 của FlexCAN0
- */
 void CAN0_ORed_16_31_MB_IRQHandler(void)
 {
-    uint32_t iflag = CAN0->IFLAG1 & CAN0->IMASK1; // Chỉ quan tâm các MB có bật ngắt
+    uint32_t iflag = CAN0->IFLAG1 & CAN0->IMASK1; // Chi quan tam cac MB co bat ngat
     ptmcan_msgbuff_t rx_frame;
 
     for (uint8_t mb_idx = 16U; mb_idx < 32U; mb_idx++)
     {
         if (iflag & (1U << mb_idx))
         {
-            // Thử đọc dữ liệu từ MB
+            // Thu doc du lieu tu mb
             if (PTMCAN_Receive(0U, mb_idx, &rx_frame) == STATUS_SUCCESS)
             {
-                // Báo lên Callback tầng ứng dụng
+                // Bao len Callback tang ung dung
                 if (s_rxCallback[0] != NULL)
                 {
                     s_rxCallback[0](0U, mb_idx, &rx_frame);
@@ -450,10 +446,10 @@ void CAN0_ORed_16_31_MB_IRQHandler(void)
     }
 }
 
-// Các hàm chẩn đoán và debug
+// Cac ham chan doan va debug
 
 /**
- * @brief Hàm lấy mã lỗi của mạng CAN (Bằng cách đọc thanh ghi ESR1)
+ * @brief Ham lay ma loi cua mang CAN (Bang cach doc thanh ghi ESR1)
  */
 uint32_t PTMCAN_GetErrorStatus(uint8_t instance)
 {
@@ -462,17 +458,17 @@ uint32_t PTMCAN_GetErrorStatus(uint8_t instance)
 }
 
 /**
- * @brief Hàm phục hồi Bus CAN bị OFF
+ * @brief Ham phuc hoi Bus CAN bi OFF
  */
 status_t PTMCAN_RecoverBusOff(uint8_t instance)
 {
     if (instance >= 3U) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
 
-    // Xóa cờ BOFFINT trong ESR1 (W1C)
+    // Xoa co BOFFINT trong ESR1 (W1C)
     base->ESR1 = CAN_ESR1_BOFFINT_MASK;
 
-    // Tạm thời chuyển sang Freeze Mode rồi quay lại Normal Mode để reset trạng thái bus
+    // Tam thoi chuyen sang Freeze Mode roi quay lai Normal Mode de reset trang thai bus
     if (ptmcan_enter_freeze_mode(base) != STATUS_SUCCESS)
     {
         return STATUS_TIMEOUT;
@@ -485,7 +481,7 @@ status_t PTMCAN_SetLoopbackMode(uint8_t instance, bool enable)
     if (instance >= 3U) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
 
-    // Bật/tắt Loopback yêu cầu phải vào Freeze Mode
+    // Bat tat Loopback, yeu cau phai vao freeze mode
     if (ptmcan_enter_freeze_mode(base) != STATUS_SUCCESS)
     {
         return STATUS_TIMEOUT;

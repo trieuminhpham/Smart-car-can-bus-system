@@ -46,10 +46,10 @@ typedef enum {
 #define PTMCAN_BOFFINT_MASK         CAN_ESR1_BOFFINT_MASK
 #define PTMCAN_ERRINT_MASK          CAN_ESR1_ERRINT_MASK
 
-// Macro cau hinh nhanh thong so Bit Timing cho toc do 500 kbps tu nguon xung 8 MHz
+// Macro cau hinh nhanh thong so Bit Riming cho toc do 500 kbps tu nguon xung 8 MHz
 #define PTMCAN_BITRATE_500KBPS_8MHz    { .prediv = 0U, .propseg = 5U, .pseg1 = 5U, .pseg2 = 2U, .rjw = 2U }
 
-// Cau hinh 500 kbps tu Bus Clock 40 MHz (PRESDIV = 4 -> Tq = 125ns, 16 Tq/bit, Sample point = 68.75%)
+// Cấu hình 500 kbps từ Bus Clock 40 MHz (PRESDIV = 4 -> Tq = 125ns, 16 Tq/bit, Sample point = 68.75%)
 #define PTMCAN_BITRATE_500KBPS_40MHz   { .prediv = 4U, .propseg = 5U, .pseg1 = 3U, .pseg2 = 4U, .rjw = 1U }
 
 /*===========================================================
@@ -118,7 +118,7 @@ typedef void (*ptmcan_callback_t)(uint8_t instance, uint8_t mb_idx, const ptmcan
 status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config);
 
 /**
- * @brief Tat hoan toan khoi FlexCAN, ngat NVIC va ngat clock PCC
+ * @brief Tat haon toan khoi FlexCAN, ngat NVIC va ngat clock PCC
  */
 status_t PTMCAN_DeInit(uint8_t instance);
 
@@ -185,7 +185,7 @@ status_t PTMCAN_RecoverBusOff(uint8_t instance);
 /* --- 5.Kiem thu va Debug --- */
 
 /**
- * @brief Bat hoac tat che do Loop-Back noi bo luc dang chay
+ * @brief Bat hoat tat che fo Loop-Back noi bo luc dang chay
  */
 status_t PTMCAN_SetLoopbackMode(uint8_t instance, bool enable);
 
