@@ -5,9 +5,18 @@
  *1. KHAI BAO THU VIEN
  *===========================================================*/
 #include "S32K144.h"
-#include "status.h"
 #include <stdint.h>
 #include <stdbool.h>
+
+#ifdef STATUS_SUCCESS
+typedef enum {
+    STATUS_SUCCESS                 = 0x000U,
+    STATUS_ERROR                   = 0x001U,
+    STATUS_BUSY                    = 0x002U,
+    STATUS_TIMEOUT                 = 0x003U,
+    STATUS_CAN_BUFF_OUT_OF_RANGE   = 0x301U
+} status_t;
+#endif
 
 /*===========================================================
  *2. CAC HANG SO DINH NGHIA
@@ -34,9 +43,14 @@
 #define PTMCAN_STUFERR_MASK         CAN_ESR1_STFERR_MASK
 #define PTMCAN_CRCERR_MASK          CAN_ESR1_CRCERR_MASK
 #define PTMCAN_FRMERR_MASK          CAN_ESR1_FRMERR_MASK
+#define PTMCAN_BOFFINT_MASK         CAN_ESR1_BOFFINT_MASK
+#define PTMCAN_ERRINT_MASK          CAN_ESR1_ERRINT_MASK
 
 // Macro cau hinh nhanh thong so Bit Riming cho toc do 500 kbps tu nguon xung 8 MHz
 #define PTMCAN_BITRATE_500KBPS_8MHz    { .prediv = 0U, .propseg = 5U, .pseg1 = 5U, .pseg2 = 2U, .rjw = 2U }
+
+// Cấu hình 500 kbps từ Bus Clock 40 MHz (PRESDIV = 4 -> Tq = 125ns, 16 Tq/bit, Sample point = 68.75%)
+#define PTMCAN_BITRATE_500KBPS_40MHz   { .prediv = 4U, .propseg = 5U, .pseg1 = 3U, .pseg2 = 4U, .rjw = 1U }
 
 /*===========================================================
  * 3. DINH NGHIA KIEU DU LIEU
