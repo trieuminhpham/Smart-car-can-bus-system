@@ -23,6 +23,8 @@ static const uint32_t g_pccCanIndex[] = {
     PCC_FlexCAN2_INDEX
 };
 
+static const uint8_t g_canMaxMb[] = { 32U, 16U, 16U };
+
 // Luu tru con tro Callback cua tang ung dung cho tung kenh
 static ptmcan_callback_t s_rxCallback[3] = { NULL, NULL, NULL };
 
@@ -89,7 +91,7 @@ static status_t ptmcan_exit_freeze_mode(CAN_Type *base)
   */
 status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config)
 {
-    if ((instance >= 3U) || (config == NULL))
+    if ((instance >= 3U) || (config == NULL) || (config->max_num_mb > g_canMaxMb[instance]))
     {
         return STATUS_ERROR;
     }
@@ -145,7 +147,8 @@ status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config)
                 | CAN_CTRL1_LPB(config->enable_loopback ? 1U : 0U);
 
     // 8. Xoa sach vung nho Message Buffers RAM (128 words tuong duong 32 MBs)
-    for (uint8_t i = 0U; i < CAN_RAMn_COUNT; i++)
+    uint8_t ram_word_count = g_canMaxMb[instance] * 4U;
+    for (uint8_t i = 0U; i < ram_word_count; i++)
     {
         base->RAMn[i] = 0U;
     }
@@ -212,7 +215,7 @@ status_t PTMCAN_DeInit(uint8_t instance)
  */
 status_t PTMCAN_ConfigRxMB(uint8_t instance, uint8_t mb_idx, uint32_t msg_id)
 {
-    if ((instance >= 3U) || (mb_idx >=32U)) return STATUS_ERROR;
+    if ((instance >= 3U) || (mb_idx >= g_canMaxMb[instance])) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
@@ -239,7 +242,7 @@ status_t PTMCAN_ConfigRxMB(uint8_t instance, uint8_t mb_idx, uint32_t msg_id)
  */
 status_t PTMCAN_ConfigTxMB(uint8_t instance, uint8_t mb_idx)
 {
-    if ((instance >= 3U) || (mb_idx >= 32U)) return STATUS_ERROR;
+    if ((instance >= 3U) || (mb_idx >= g_canMaxMb[instance])) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
@@ -258,7 +261,7 @@ status_t PTMCAN_ConfigTxMB(uint8_t instance, uint8_t mb_idx)
  */
 status_t PTMCAN_SetRxMask(uint8_t instance, uint8_t mb_idx, uint32_t mask)
 {
-    if ((instance >= 3U) || (mb_idx >= 32U)) return STATUS_ERROR;
+    if ((instance >= 3U) || (mb_idx >= g_canMaxMb[instance])) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
 
     // Vao Freeze Mode de ghi thanh ghi RXIMR
@@ -279,7 +282,7 @@ status_t PTMCAN_SetRxMask(uint8_t instance, uint8_t mb_idx, uint32_t mask)
  */
 status_t PTMCAN_Transmit(uint8_t instance, uint8_t mb_idx, const ptmcan_msgbuff_t *tx_msg)
 {
-    if ((instance >= 3U) || (mb_idx >= 32U) || (tx_msg == NULL)) return STATUS_ERROR;
+    if ((instance >= 3U) || (mb_idx >= g_canMaxMb[instance]) || (tx_msg == NULL)) return STATUS_ERROR;
     if (tx_msg->data_len > PTMCAN_MAX_PAYLOAD_SIZE) return STATUS_ERROR;
 
     CAN_Type *base = g_canBase[instance];
@@ -330,7 +333,7 @@ status_t PTMCAN_Transmit(uint8_t instance, uint8_t mb_idx, const ptmcan_msgbuff_
  */
 status_t PTMCAN_Receive(uint8_t instance, uint8_t mb_idx, ptmcan_msgbuff_t *rx_msg)
 {
-    if ((instance >= 3U) || (mb_idx >= 32U) || (rx_msg == NULL)) return STATUS_ERROR;
+    if ((instance >= 3U) || (mb_idx >= g_canMaxMb[instance]) || (rx_msg == NULL)) return STATUS_ERROR;
 
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
@@ -368,11 +371,11 @@ status_t PTMCAN_Receive(uint8_t instance, uint8_t mb_idx, ptmcan_msgbuff_t *rx_m
         rx_msg->data[i] = (uint8_t)((data_w1 >> (24U - ((i - 4U) * 8U))) & 0xFFU);
     }
 
-    // 5. Doc thanh ghi timer de unlock MB
-    (void)base->TIMER;
-
-    // 6. Xoa co ngat IFLAG1 (Ghi 1 de xoa - W1C)
+    // 5. Xoa co ngat IFLAG1 (Ghi 1 de xoa - W1C)
     base->IFLAG1 = (1U << mb_idx);
+    
+    // 6. Doc thanh ghi timer de unlock MB
+    (void)base->TIMER;
 
     return STATUS_SUCCESS;
 }
@@ -382,7 +385,7 @@ status_t PTMCAN_Receive(uint8_t instance, uint8_t mb_idx, ptmcan_msgbuff_t *rx_m
  */
 bool PTMCAN_IsMBBusy(uint8_t instance, uint8_t mb_idx)
 {
-    if ((instance >= 3U) || (mb_idx >= 32U)) return false;
+    if ((instance >= 3U) || (mb_idx >= g_canMaxMb[instance])) return false;
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
@@ -397,7 +400,7 @@ bool PTMCAN_IsMBBusy(uint8_t instance, uint8_t mb_idx)
  */
 status_t PTMCAN_AbortTx(uint8_t instance, uint8_t mb_idx)
 {
-    if ((instance >= 3U) || (mb_idx >= 32U)) return STATUS_ERROR;
+    if ((instance >= 3U) || (mb_idx >= g_canMaxMb[instance])) return STATUS_ERROR;
     CAN_Type *base = g_canBase[instance];
     volatile uint32_t *mb = &base->RAMn[mb_idx * 4U];
 
