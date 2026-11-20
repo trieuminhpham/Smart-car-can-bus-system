@@ -2,7 +2,7 @@
 #define PTMCAN_DRIVER_H_
 
 /*===========================================================
- *1. KHAI BAO THU VIEN
+ * 1. KHAI BAO THU VIEN
  *===========================================================*/
 #include "S32K144.h"
 #include <stdint.h>
@@ -26,11 +26,14 @@ typedef enum {
 } status_t;
 #endif
 
+/* Ma tra ve rieng cua driver: hop thu chua co tin moi (dung de polling) */
+#define PTMCAN_STATUS_NO_DATA       ((status_t)0x3F1U)
+
 /*===========================================================
- *2. CAC HANG SO DINH NGHIA
+ * 2. CAC HANG SO DINH NGHIA
  *===========================================================*/
 
-// Chi so cac phan cung can ho tro
+// Chi so cac kenh phan cung can ho tro
 #define PTMCAN_INSTANCE_0           (0U)
 #define PTMCAN_INSTANCE_1           (1U)
 #define PTMCAN_INSTANCE_2           (2U)
@@ -54,11 +57,19 @@ typedef enum {
 #define PTMCAN_BOFFINT_MASK         CAN_ESR1_BOFFINT_MASK
 #define PTMCAN_ERRINT_MASK          CAN_ESR1_ERRINT_MASK
 
-// Macro cau hinh nhanh thong so Bit Riming cho toc do 500 kbps tu nguon xung 8 MHz
+// Cac co loi dang "sticky" trong ESR1 (ghi 1 de xoa - W1C)
+#define PTMCAN_ERR_CLEARABLE_MASK   (PTMCAN_ACKERR_MASK  | PTMCAN_BIT0ERR_MASK | \
+                                     PTMCAN_BIT1ERR_MASK | PTMCAN_STUFERR_MASK | \
+                                     PTMCAN_CRCERR_MASK  | PTMCAN_FRMERR_MASK  | \
+                                     PTMCAN_BOFFINT_MASK | PTMCAN_ERRINT_MASK)
+
+/* Macro Bit Timing 500 kbps tu xung 8 MHz (CLKSRC = OSC, thach anh EVB S32K144)
+ * 16 Tq/bit, Tq = 125 ns, sample point = 81.25% */
 #define PTMCAN_BITRATE_500KBPS_8MHz    { .prediv = 0U, .propseg = 5U, .pseg1 = 5U, .pseg2 = 2U, .rjw = 2U }
 
 // Cấu hình 500 kbps từ Bus Clock 40 MHz (PRESDIV = 4 -> Tq = 125ns, 16 Tq/bit, Sample point = 68.75%)
 #define PTMCAN_BITRATE_500KBPS_40MHz   { .prediv = 4U, .propseg = 5U, .pseg1 = 3U, .pseg2 = 4U, .rjw = 1U }
+#define PTMCAN_BITRATE_500KBPS_40MHz_SP875  { .prediv = 4U, .propseg = 6U, .pseg1 = 5U, .pseg2 = 1U, .rjw = 1U }
 
 /*===========================================================
  * 3. DINH NGHIA KIEU DU LIEU
@@ -131,6 +142,17 @@ status_t PTMCAN_Init(uint8_t instance, const ptmcan_user_config_t *config);
 status_t PTMCAN_DeInit(uint8_t instance);
 
 /**
+ * @brief Dung module (vao Freeze Mode) de cau hinh nhieu MB/mask lien tuc ma khong bi
+ *        vao/ra Freeze nhieu lan. Cau hinh xong goi PTMCAN_Start().
+ */
+status_t PTMCAN_Stop(uint8_t instance);
+
+/**
+ * @brief Cho module chay lai (thoat Freeze Mode)
+ */
+status_t PTMCAN_Start(uint8_t instance);
+
+/**
  * @brief Chuan bi mot hop thu (MB) de nhan tin
  */
 status_t PTMCAN_ConfigRxMB(uint8_t instance, uint8_t mb_idx, uint32_t msg_id);
@@ -185,6 +207,11 @@ void PTMCAN_RegisterRxCallback(uint8_t instance, ptmcan_callback_t callback);
 uint32_t PTMCAN_GetErrorStatus(uint8_t instance);
 
 /**
+ * @brief Xoa cac co loi sticky trong ESR1 (chi cac bit trong PTMCAN_ERR_CLEARABLE_MASK)
+ */
+status_t PTMCAN_ClearErrorStatus(uint8_t instance, uint32_t flags);
+
+/**
  * @brief Kiem tra trang thai Bus-off
  */
 status_t PTMCAN_RecoverBusOff(uint8_t instance);
@@ -197,4 +224,4 @@ status_t PTMCAN_RecoverBusOff(uint8_t instance);
  */
 status_t PTMCAN_SetLoopbackMode(uint8_t instance, bool enable);
 
-#endif 
+#endif /* PTMCAN_DRIVER_H_ */
